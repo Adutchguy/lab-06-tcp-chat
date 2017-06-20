@@ -50,7 +50,7 @@ server.on('connection', (socket) => {
       socket.write(`${client.nick}: @${dmClient}(${messageText})`);
       clientPool.forEach((item, i, clientPool) => {
         if(dmClient === clientPool[i].nick) {
-          clientPool[i].write(`${client.nick}: @${dmClient}(${messageText})\n`);
+          item.socket.write(`${client.nick}: @${dmClient}(${messageText})\n`);
           return;
         }
       });
