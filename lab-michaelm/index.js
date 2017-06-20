@@ -4,16 +4,21 @@ const net = require('net');
 const server = module.exports = net.createServer();
 
 let clientPool = [];
+let guestNum = 0;
 
 server.on('connection', (socket) => {
-  socket.write(`Welcome to Miller chat.\n`);
+
+  socket.nick = `Guest_${guestNum += 1}`;
   clientPool = [...clientPool, socket];
-  if(clientPool.length > 1) {
-    clientPool.forEach((item, i, clientPool) => {
-      item.write(`Welcome ${clientPool[i].nick}, to Miller Chat.\n`);
+
+  clientPool.forEach((item, i, clientPool) => {
+    if (item.nick === socket.nick) {
+      item.write(`\nWelcome ${clientPool[i].nick}, to Miller Chat.`);
       return;
-    });
-  }
+    } else if (item.nick !== socket.nick) {
+      item.write(`\n${socket.nick} has connected.`);
+    }
+  });
   console.log(`${socket.nick} connected!`);
 
 
@@ -56,9 +61,9 @@ server.on('connection', (socket) => {
     }
     let endSocketMsg = 'You have left Miller chat.';
     if(data.startsWith('/quit')) {
-      clientPool.forEach((item, i, clientPool) => {
-        if(clientPool[i].nick) {
-          clientPool[i].end(endSocketMsg);
+      clientPool.forEach(() => {
+        if(socket.nick) {
+          socket.end(endSocketMsg);
         }
       });
     }
@@ -77,10 +82,6 @@ server.on('connection', (socket) => {
     }
   });
 });
-
-
-
-
 
 server.listen(3000, () => {
   console.log(`Opened server on`, server.address(() => {
