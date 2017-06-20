@@ -2,19 +2,20 @@
 
 const net = require('net');
 const server = module.exports = net.createServer();
-const wack = require('./modules/wack.js');
 
 let clientPool = [];
 
-const ClientPool = function(socket, nick) {
-
-};
-
 server.on('connection', (socket) => {
-  socket.write(`Welcome socket, to Miller Chat.\n`);
+  socket.write(`Welcome to Miller chat.\n`);
+  clientPool = [...clientPool, socket];
+  if(clientPool.length > 1) {
+    clientPool.forEach((item, i, clientPool) => {
+      item.write(`Welcome ${clientPool[i].nick}, to Miller Chat.\n`);
+      return;
+    });
+  }
   console.log(`${socket.nick} connected!`);
 
-  clientPool = [...clientPool, socket];
 
   let handleDisconnect = () => {
     console.log(`${socket.nick} left the chat`);
@@ -31,7 +32,9 @@ server.on('connection', (socket) => {
       socket.nick = socket.nick.trim();
       socket.write(`You are now known as ${socket.nick}`);
       return;
-    } else if (data.startsWith('/dm')) {
+    }
+
+    if (data.startsWith('/dm')) {
       let message = data.split('/dm ')[1].trim() || '';
       let dmClient = message.split(' ')[0] || '';
       let messageText = message.split(`${dmClient} `)[1] || '';
@@ -42,14 +45,40 @@ server.on('connection', (socket) => {
           return;
         }
       });
-    } else {
+    }
+    let dataPrefix = data.split(' ')[0];
+    console.log(dataPrefix);
+    if(dataPrefix !== '/dm' && dataPrefix !== '/troll' && dataPrefix !== '/nick' && dataPrefix !== '/quit') {
       clientPool.forEach((item) => {
         item.write(`${socket.nick}: ${data}`);
         return;
       });
     }
+    let endSocketMsg = 'You have left Miller chat.';
+    if(data.startsWith('/quit')) {
+      clientPool.forEach((item, i, clientPool) => {
+        if(clientPool[i].nick) {
+          clientPool[i].end(endSocketMsg);
+        }
+      });
+    }
+
+    if(data.startsWith('/troll')) {
+      let message = data.split('/troll ')[1].trim() || '';
+      let numOfTroll = message.split(' ')[0] || '';
+      let messageText = message.split(`${numOfTroll} `)[1] || '';
+      socket.write(`${socket.nick}: ${messageText}`);
+      for(let i = 0 ; i < numOfTroll ; i++)() => {
+        if(socket.nick !== clientPool[i].nick) {
+          socket.write(`${socket.nick}: (${messageText})`);
+        }
+      };
+      return;
+    }
   });
 });
+
+
 
 
 
