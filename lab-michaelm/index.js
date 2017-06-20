@@ -1,16 +1,20 @@
 'use strict';
 
 const net = require('net');
-const server = net.createServer();
+const server = module.exports = net.createServer();
 const wack = require('./modules/wack.js');
 
-const ClientPool = function() {
+let clientPool = [];
+
+const ClientPool = function(socket, nick) {
 
 };
 
 server.on('connection', (socket) => {
   socket.write(`Welcome socket, to Miller Chat.\n`);
   console.log(`${socket.nick} connected!`);
+
+  clientPool = [...clientPool, socket];
 
   let handleDisconnect = () => {
     console.log(`${socket.nick} left the chat`);
@@ -27,30 +31,30 @@ server.on('connection', (socket) => {
       socket.nick = socket.nick.trim();
       socket.write(`You are now known as ${socket.nick}`);
       return;
+    } else if (data.startsWith('/dm')) {
+      let message = data.split('/dm ')[1].trim() || '';
+      let dmClient = message.split(' ')[0] || '';
+      let messageText = message.split(`${dmClient} `)[1] || '';
+      socket.write(`${socket.nick}: @${dmClient}(${messageText})`);
+      clientPool.forEach((item, i, clientPool) => {
+        if(dmClient === clientPool[i].nick) {
+          clientPool[i].write(`${socket.nick}: @${dmClient}(${messageText})`);
+          return;
+        }
+      });
+    } else {
+      clientPool.forEach((item) => {
+        item.write(`${socket.nick}: ${data}`);
+        return;
+      });
     }
-
-    if(data.startsWith('/dm')[1] || '') {
-      let content = data.split('/dm')[1] || ''
-    }
-
-    clientPool.forEach((item) => {
-      item.write(`${socket.nick}: ${data}`);
-    });
   });
 });
 
 
 
 server.listen(3000, () => {
-  console.log(`Opened server on port 3000`);
-});
-
-server.on('error', (e) => {
-  if (e.code === 'EADDRINUSE') {
-    console.log('Address in use, retrying...');
-    setTimeout(() => {
-      server.close();
-      server.listen(3000);
-    }, 1000);
-  }
+  console.log(`Opened server on`, server.address(() => {
+    return this[2];
+  }));
 });
