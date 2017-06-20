@@ -2,29 +2,32 @@
 
 const net = require('net');
 const server = module.exports = net.createServer();
+const ClientPool = require('./mod/client-const.js');
 
-let clientPool = [];
-let guestNum = 0;
+let clientPool = module.exports = [];
 
 server.on('connection', (socket) => {
+  let randomInt = Math.ceil((Math.random() * 100));
 
-  socket.nick = `Guest_${guestNum += 1}`;
-  clientPool = [...clientPool, socket];
+  let client = new ClientPool(socket,null, randomInt);
+
+  client.nick = `Guest_${client.clientNum}`;
+  clientPool = [...clientPool, client];
 
   clientPool.forEach((item, i, clientPool) => {
-    if (item.nick === socket.nick) {
-      item.write(`\nWelcome ${clientPool[i].nick}, to Miller Chat.`);
+    if (item.nick === client.nick) {
+      item.socket.write(`\nWelcome ${clientPool[i].nick}, to Miller Chat.\n`);
       return;
-    } else if (item.nick !== socket.nick) {
-      item.write(`\n${socket.nick} has connected.`);
+    } else if (item.socket.nick !== client.nick) {
+      item.socket.write(`\n${client.nick} has connected.\n`);
     }
   });
-  console.log(`${socket.nick} connected!`);
+  console.log(`${client.nick} connected!`);
 
 
   let handleDisconnect = () => {
-    console.log(`${socket.nick} left the chat`);
-    clientPool = clientPool.filter(item => item !== socket);
+    console.log(`${client.nick} left the chat`);
+    clientPool = clientPool.filter(item => item.socket !== client);
   };
 
   socket.on('error', handleDisconnect);
@@ -32,10 +35,11 @@ server.on('connection', (socket) => {
 
   socket.on('data', (buffer) => {
     let data = buffer.toString();
+
     if (data.startsWith('/nick')) {
-      socket.nick = data.split('nick ')[1] || socket.nick;
-      socket.nick = socket.nick.trim();
-      socket.write(`You are now known as ${socket.nick}`);
+      client.nick = data.split('nick ')[1] || client.nick;
+      client.nick = client.nick.trim();
+      socket.write(`You are now known as ${client.nick}\n`);
       return;
     }
 
@@ -43,27 +47,28 @@ server.on('connection', (socket) => {
       let message = data.split('/dm ')[1].trim() || '';
       let dmClient = message.split(' ')[0] || '';
       let messageText = message.split(`${dmClient} `)[1] || '';
-      socket.write(`${socket.nick}: @${dmClient}(${messageText})`);
+      socket.write(`${client.nick}: @${dmClient}(${messageText})`);
       clientPool.forEach((item, i, clientPool) => {
         if(dmClient === clientPool[i].nick) {
-          clientPool[i].write(`${socket.nick}: @${dmClient}(${messageText})`);
+          clientPool[i].write(`${client.nick}: @${dmClient}(${messageText})\n`);
           return;
         }
       });
     }
+
     let dataPrefix = data.split(' ')[0];
-    console.log(dataPrefix);
     if(dataPrefix !== '/dm' && dataPrefix !== '/troll' && dataPrefix !== '/nick' && dataPrefix !== '/quit') {
       clientPool.forEach((item) => {
-        item.write(`${socket.nick}: ${data}`);
+        item.socket.write(`${client.nick}: ${data}`);
         return;
       });
     }
-    let endSocketMsg = 'You have left Miller chat.';
+
+    let endSocketMsg = 'You have left Miller chat.\n';
     if(data.startsWith('/quit')) {
-      clientPool.forEach(() => {
-        if(socket.nick) {
-          socket.end(endSocketMsg);
+      clientPool.forEach((item, i, clientPool) => {
+        if(client.nick === clientPool[i].nick) {
+          item.socket.end(endSocketMsg);
         }
       });
     }
@@ -72,12 +77,16 @@ server.on('connection', (socket) => {
       let message = data.split('/troll ')[1].trim() || '';
       let numOfTroll = message.split(' ')[0] || '';
       let messageText = message.split(`${numOfTroll} `)[1] || '';
-      socket.write(`${socket.nick}: ${messageText}`);
-      for(let i = 0 ; i < numOfTroll ; i++)() => {
-        if(socket.nick !== clientPool[i].nick) {
-          socket.write(`${socket.nick}: (${messageText})`);
-        }
-      };
+      socket.write(`${client.nick}: ${messageText}`);
+      clientPool.forEach((item, i, clientPool) => {
+        let j = 0;
+        while(j < numOfTroll) () => {
+          if(client.socket !== clientPool[i].socket) {
+            client.socket.write(`${client.nick}: (${messageText})\n`);
+            i++;
+          }
+        };
+      });
       return;
     }
   });
