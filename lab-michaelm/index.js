@@ -59,7 +59,7 @@ server.on('connection', (socket) => {
     let dataPrefix = data.split(' ')[0];
     if(dataPrefix !== '/dm' && dataPrefix !== '/troll' && dataPrefix !== '/nick' && dataPrefix !== '/quit') {
       clientPool.forEach((item) => {
-        item.socket.write(`${client.nick}: ${data}`);
+        item.socket.write(`${client.nick}: ${data}`) || '';
         return;
       });
     }
@@ -75,19 +75,19 @@ server.on('connection', (socket) => {
 
     if(data.startsWith('/troll')) {
       let message = data.split('/troll ')[1].trim() || '';
-      let numOfTroll = message.split(' ')[0] || '';
-      let messageText = message.split(`${numOfTroll} `)[1] || '';
+      let numOfTroll = parseInt(message.split(' ')[0]) || '';
+      let messageText = data.split(`/troll ${numOfTroll} `)[1] || '';
       socket.write(`${client.nick}: ${messageText}`);
       clientPool.forEach((item, i, clientPool) => {
-        let j = 0;
-        while(j < numOfTroll) () => {
-          if(client.socket !== clientPool[i].socket) {
-            client.socket.write(`${client.nick}: (${messageText})\n`);
-            i++;
+        if(client.nick !== item.nick) {
+          let j = 0;
+          while(j <= numOfTroll) {
+            console.log(j);
+            item.socket.write(`${client.nick}: (${messageText})\n`);
+            j++;
           }
-        };
+        }
       });
-      return;
     }
   });
 });
